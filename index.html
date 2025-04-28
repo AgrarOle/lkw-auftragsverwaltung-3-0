@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>LKW-Auflieger Verwaltung</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 800px;
+            margin: auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        img {
+            max-width: 100%;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #0078D7;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #005fa3;
+        }
+        hr {
+            margin: 30px 0;
+        }
+        .assignment-entry {
+            background: #eee;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>LKW & Auflieger Verwaltung</h2>
+
+    <!-- Neuen LKW hinzufügen -->
+    <h3>Neuen LKW hinzufügen</h3>
+    <input type="text" id="newTruckName" placeholder="LKW-Name (z.B. Scania R500)">
+    <input type="text" id="newTruckPlate" placeholder="Kennzeichen (z.B. HH-AB 1234)">
+    <button onclick="addTruck()">LKW hinzufügen</button>
+
+    <hr>
+
+    <!-- Neuen Auflieger hinzufügen -->
+    <h3>Neuen Auflieger hinzufügen</h3>
+    <input type="text" id="newTrailerName" placeholder="Auflieger-Typ (z.B. Kühlauflieger)">
+    <input type="text" id="newTrailerPlate" placeholder="Kennzeichen (z.B. HH-XY 9876)">
+    <button onclick="addTrailer()">Auflieger hinzufügen</button>
+
+    <hr>
+
+    <!-- LKW und Auflieger zuweisen -->
+    <h3>LKW & Auflieger zuweisen</h3>
+    <form id="assignmentForm">
+        <label for="truck">LKW auswählen:</label>
+        <select id="truck" required></select>
+
+        <label for="trailer">Auflieger auswählen:</label>
+        <select id="trailer" required></select>
+
+        <label for="photo">Foto hochladen (optional):</label>
+        <input type="file" id="photo" accept="image/*">
+
+        <button type="submit">Zuweisen</button>
+    </form>
+
+    <hr>
+
+    <!-- Aktuelle Aufträge -->
+    <h3>Aktuelle Zuweisungen</h3>
+    <div id="assignmentList"></div>
+
+    <hr>
+
+    <!-- Alle Auflieger mit Fotos -->
+    <h3>Auflieger Übersicht</h3>
+    <div id="trailerList"></div>
+</div>
+
+<script>
+    let trucks = JSON.parse(localStorage.getItem('trucks')) || [];
+    let trailers = JSON.parse(localStorage.getItem('trailers')) || [];
+    let assignments = JSON.parse(localStorage.getItem('assignments')) || [];
+
+    const truckSelect = document.getElementById('truck');
+    const trailerSelect = document.getElementById('trailer');
+    const assignmentList = document.getElementById('assignmentList');
+    const trailerList = document.getElementById('trailerList');
+
+    function saveData() {
+        localStorage.setItem('trucks', JSON.stringify(trucks));
+        localStorage.setItem('trailers', JSON.stringify(trailers));
+        localStorage.setItem('assignments', JSON.stringify(assignments));
+    }
+
+    function renderOptions() {
+        truckSelect.innerHTML = '<option value="">Bitte wählen...</option>';
+        trailerSelect.innerHTML = '<option value="">Bitte wählen...</option>';
+
+        trucks.forEach(truck => {
+            const option = document.createElement('option');
+            option.value = truck;
+            option.text = truck;
+            truckSelect.add(option);
+        });
+
+        trailers.forEach((trailer, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.text = trailer.name;
+            trailerSelect.add(option);
+        });
+    }
+
+    function renderAssignments() {
+        assignmentList.innerHTML = '';
+        assignments.forEach((a, index) => {
+            const div = document.createElement('div');
+            div.className = 'assignment-entry';
+            div.innerHTML = `
+                <strong>LKW:</strong> ${a.truck}<br>
+                <strong>Auflieger:</strong> ${trailers[a.trailerIndex].name}<br>
+                <img src="${trailers[a.trailerIndex].photo}" alt="Auflieger-Foto"><br>
+                <button onclick="removeAssignment(${index})">Auftrag beenden (Trennen)</button>
+            `;
+            assignmentList.appendChild(div);
+        });
+    }
+
+    function renderTrailers() {
+        trailerList.innerHTML = '';
+        trailers.forEach(trailer => {
+            const div = document.createElement('div');
+            div.className = 'assignment-entry';
+            div.innerHTML = `
+                <strong>Auflieger:</strong> ${trailer.name}<br>
+                ${trailer.photo ? `<img src="${trailer.photo}" alt="Auflieger-Foto">` : 'Kein Foto vorhanden'}
+            `;
+            trailerList.appendChild(div);
+        });
+    }
+
+    function addTruck() {
+        const name = document.getElementById('newTruckName').value.trim();
+        const plate = document.getElementById('newTruckPlate').value.trim();
+        if (name && plate) {
+            trucks.push(`${name} (${plate})`);
+            saveData();
+            renderOptions();
+            document.getElementById('newTruckName').value = '';
+            document.getElementById('newTruckPlate').value = '';
+        } else {
+            alert('Bitte sowohl LKW-Name als auch Kennzeichen eingeben.');
+        }
+    }
+
+    function addTrailer() {
+        const name = document.getElementById('newTrailerName').value.trim();
+        const plate = document.getElementById('newTrailerPlate').value.trim();
+        if (name && plate) {
+            trailers.push({ name: `${name} (${plate})`, photo: '' });
+            saveData();
+            renderOptions();
+            renderTrailers();
+            document.getElementById('newTrailerName').value = '';
+            document.getElementById('newTrailerPlate').value = '';
+        } else {
+            alert('Bitte sowohl Auflieger-Typ als auch Kennzeichen eingeben.');
+        }
+    }
+
+    document.getElementById('assignmentForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const truck = truckSelect.value;
+        const trailerIndex = trailerSelect.value;
+        const photoInput = document.getElementById('photo');
+        const file = photoInput.files[0];
+
+        if (truck !== "" && trailerIndex !== "") {
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    trailers[trailerIndex].photo = e.target.result;
+                    assignments.push({ truck: truck, trailerIndex: trailerIndex });
+                    saveData();
+                    renderAssignments();
+                    renderTrailers();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                assignments.push({ truck: truck, trailerIndex: trailerIndex });
+                saveData();
+                renderAssignments();
+                renderTrailers();
+            }
+        }
+    });
+
+    function removeAssignment(index) {
+        const finished = assignments[index];
+        alert(`Auftrag beendet:\nLKW: ${finished.truck}\nAuflieger: ${trailers[finished.trailerIndex].name}`);
+        assignments.splice(index, 1);
+        saveData();
+        renderAssignments();
+    }
+
+    renderOptions();
+    renderAssignments();
+    renderTrailers();
+</script>
+
+</body>
+</html>
